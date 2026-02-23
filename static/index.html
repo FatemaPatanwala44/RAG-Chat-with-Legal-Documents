@@ -1,0 +1,756 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Legal RAG Assistant</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1e2b4a 0%, #2c3e50 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+            animation: slideIn 0.5s ease-out;
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateY(-20px);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
+        .header {
+            background: linear-gradient(135deg, #1a2b3c 0%, #2c3e50 100%);
+            color: white;
+            padding: 40px;
+            text-align: center;
+            border-bottom: 4px solid #3498db;
+        }
+
+        .header h1 {
+            font-size: 2.8em;
+            margin-bottom: 10px;
+            font-weight: 600;
+            letter-spacing: 1px;
+        }
+
+        .header h1 span {
+            color: #3498db;
+            margin-right: 10px;
+        }
+
+        .header p {
+            font-size: 1.2em;
+            opacity: 0.9;
+            color: #ecf0f1;
+        }
+
+        .upload-section {
+            padding: 30px;
+            background: #f8f9fa;
+            border-bottom: 2px solid #e9ecef;
+        }
+
+        .file-input-wrapper {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            background: white;
+            padding: 5px;
+            border-radius: 50px;
+            border: 2px solid #e9ecef;
+            transition: all 0.3s ease;
+        }
+
+        .file-input-wrapper:hover {
+            border-color: #3498db;
+            box-shadow: 0 5px 15px rgba(52, 152, 219, 0.2);
+        }
+
+        .file-label {
+            flex: 1;
+            padding: 15px 25px;
+            background: #f1f3f5;
+            border-radius: 50px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            transition: background 0.3s;
+            font-weight: 500;
+        }
+
+        .file-label:hover {
+            background: #e9ecef;
+        }
+
+        .file-icon {
+            font-size: 1.3em;
+        }
+
+        .upload-btn {
+            padding: 15px 35px;
+            background: #28a745;
+            color: white;
+            border: none;
+            border-radius: 50px;
+            cursor: pointer;
+            font-size: 1em;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.3s;
+        }
+
+        .upload-btn:hover:not(:disabled) {
+            background: #218838;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(40, 167, 69, 0.3);
+        }
+
+        .upload-btn:disabled {
+            background: #6c757d;
+            cursor: not-allowed;
+            opacity: 0.5;
+        }
+
+        .btn-icon {
+            font-size: 1.1em;
+        }
+
+        .file-info {
+            margin-top: 15px;
+            padding: 15px;
+            border-radius: 10px;
+            font-size: 0.95em;
+            animation: fadeIn 0.3s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .file-info.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .file-info.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .progress {
+            margin-top: 15px;
+            height: 6px;
+            background: #e9ecef;
+            border-radius: 3px;
+            overflow: hidden;
+        }
+
+        .progress-bar {
+            height: 100%;
+            background: #28a745;
+            width: 0%;
+            transition: width 0.3s;
+        }
+
+        .chat-section {
+            padding: 30px;
+        }
+
+        .chat-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #e9ecef;
+        }
+
+        .chat-header h3 {
+            color: #2c3e50;
+            font-size: 1.4em;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .chat-header h3 span {
+            font-size: 1.5em;
+        }
+
+        #docName {
+            background: #e9ecef;
+            padding: 8px 20px;
+            border-radius: 50px;
+            font-size: 0.9em;
+            color: #495057;
+            font-weight: 500;
+            max-width: 300px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .chat-messages {
+            height: 450px;
+            overflow-y: auto;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 15px;
+            margin-bottom: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .message {
+            max-width: 80%;
+            padding: 15px 20px;
+            border-radius: 15px;
+            line-height: 1.6;
+            word-wrap: break-word;
+            animation: messagePop 0.3s ease-out;
+        }
+
+        @keyframes messagePop {
+            from {
+                transform: scale(0.8);
+                opacity: 0;
+            }
+            to {
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
+
+        .user-message {
+            background: #3498db;
+            color: white;
+            align-self: flex-end;
+            border-bottom-right-radius: 5px;
+        }
+
+        .bot-message {
+            background: white;
+            color: #2c3e50;
+            align-self: flex-start;
+            border-bottom-left-radius: 5px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .bot-message strong {
+            color: #2c3e50;
+        }
+
+        .bot-message em {
+            color: #7f8c8d;
+            font-size: 0.9em;
+        }
+
+        .input-group {
+            display: flex;
+            gap: 10px;
+            position: relative;
+        }
+
+        #questionInput {
+            flex: 1;
+            padding: 15px 20px;
+            border: 2px solid #e9ecef;
+            border-radius: 50px;
+            font-size: 1em;
+            transition: all 0.3s;
+        }
+
+        #questionInput:focus {
+            outline: none;
+            border-color: #3498db;
+            box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.2);
+        }
+
+        #questionInput:disabled {
+            background: #e9ecef;
+            cursor: not-allowed;
+        }
+
+        #sendBtn {
+            padding: 0 35px;
+            background: #3498db;
+            color: white;
+            border: none;
+            border-radius: 50px;
+            cursor: pointer;
+            font-size: 1em;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.3s;
+        }
+
+        #sendBtn:hover:not(:disabled) {
+            background: #2980b9;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(52, 152, 219, 0.3);
+        }
+
+        #sendBtn:disabled {
+            background: #6c757d;
+            cursor: not-allowed;
+            opacity: 0.5;
+        }
+
+        .typing-indicator {
+            display: flex;
+            gap: 5px;
+            padding: 12px 20px;
+            background: white;
+            border-radius: 50px;
+            width: fit-content;
+            margin-top: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .typing-indicator span {
+            width: 8px;
+            height: 8px;
+            background: #3498db;
+            border-radius: 50%;
+            animation: typing 1s infinite ease-in-out;
+        }
+
+        .typing-indicator span:nth-child(2) {
+            animation-delay: 0.2s;
+        }
+
+        .typing-indicator span:nth-child(3) {
+            animation-delay: 0.4s;
+        }
+
+        @keyframes typing {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+
+        .welcome-message {
+            text-align: center;
+            color: #6c757d;
+            padding: 40px 20px;
+        }
+
+        .welcome-message .icon {
+            font-size: 4em;
+            margin-bottom: 20px;
+            display: block;
+        }
+
+        .welcome-message p {
+            font-size: 1.1em;
+            margin-bottom: 10px;
+        }
+
+        .footer {
+            text-align: center;
+            padding: 20px;
+            background: #f8f9fa;
+            color: #6c757d;
+            font-size: 0.9em;
+            border-top: 1px solid #e9ecef;
+        }
+
+        .footer a {
+            color: #3498db;
+            text-decoration: none;
+        }
+
+        .footer a:hover {
+            text-decoration: underline;
+        }
+
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 2em;
+            }
+            
+            .file-input-wrapper {
+                flex-direction: column;
+                background: transparent;
+                border: none;
+            }
+            
+            .file-label, .upload-btn {
+                width: 100%;
+                justify-content: center;
+            }
+            
+            .message {
+                max-width: 90%;
+            }
+            
+            #docName {
+                max-width: 150px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>
+                <span>⚖️</span> Legal RAG Assistant
+            </h1>
+            <p>Upload legal documents and ask questions - AI-powered answers with citations</p>
+        </div>
+
+        <div class="upload-section">
+            <div class="file-input-wrapper">
+                <label for="fileInput" class="file-label">
+                    <span class="file-icon">📄</span>
+                    <span id="fileLabelText">Choose a PDF file</span>
+                </label>
+                <input type="file" id="fileInput" accept=".pdf" hidden>
+                <button onclick="uploadFile()" class="upload-btn" id="uploadBtn" disabled>
+                    <span class="btn-icon">⬆️</span> Upload
+                </button>
+            </div>
+            <div id="fileInfo" class="file-info"></div>
+            <div id="uploadProgress" class="progress" style="display:none;">
+                <div class="progress-bar" id="progressBar"></div>
+            </div>
+        </div>
+
+        <div class="chat-section" id="chatSection" style="display:none;">
+            <div class="chat-header">
+                <h3>
+                    <span>💬</span> Chat with Document
+                </h3>
+                <span id="docName"></span>
+            </div>
+            
+            <div id="chatMessages" class="chat-messages">
+                <!-- Welcome message will be added by JavaScript -->
+            </div>
+            
+            <div class="input-group">
+                <input type="text" id="questionInput" 
+                       placeholder="Ask a legal question... (e.g., What are the termination clauses?)"
+                       onkeypress="handleKeyPress(event)" disabled>
+                <button onclick="sendQuestion()" id="sendBtn" disabled>
+                    <span class="btn-icon">📤</span> Send
+                </button>
+            </div>
+            <div class="typing-indicator" id="typingIndicator" style="display:none;">
+                <span></span><span></span><span></span>
+            </div>
+        </div>
+
+        <div class="footer">
+            ⚖️ Legal Document Q&A System | Powered by RAG & Gemini AI
+        </div>
+    </div>
+
+    <script>
+        // ==================== STATE MANAGEMENT ====================
+        let uploadedFile = null;
+        let uploadedFileName = '';
+
+        // ==================== DOM ELEMENTS ====================
+        const fileInput = document.getElementById('fileInput');
+        const fileLabelText = document.getElementById('fileLabelText');
+        const uploadBtn = document.getElementById('uploadBtn');
+        const fileInfo = document.getElementById('fileInfo');
+        const uploadProgress = document.getElementById('uploadProgress');
+        const progressBar = document.getElementById('progressBar');
+        const chatSection = document.getElementById('chatSection');
+        const chatMessages = document.getElementById('chatMessages');
+        const questionInput = document.getElementById('questionInput');
+        const sendBtn = document.getElementById('sendBtn');
+        const docName = document.getElementById('docName');
+        const typingIndicator = document.getElementById('typingIndicator');
+
+        // ==================== INITIALIZATION ====================
+        document.addEventListener('DOMContentLoaded', function() {
+            // Add welcome message
+            addWelcomeMessage();
+            
+            // Check server health
+            checkServerHealth();
+        });
+
+        // ==================== FILE INPUT HANDLER ====================
+        fileInput.addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                // Check file type
+                if (!file.name.toLowerCase().endsWith('.pdf')) {
+                    showFileInfo('❌ Only PDF files are allowed', 'error');
+                    fileInput.value = '';
+                    uploadBtn.disabled = true;
+                    uploadedFile = null;
+                    return;
+                }
+                
+                // Check file size (max 50MB)
+                if (file.size > 50 * 1024 * 1024) {
+                    showFileInfo('❌ File too large (max 50MB)', 'error');
+                    fileInput.value = '';
+                    uploadBtn.disabled = true;
+                    uploadedFile = null;
+                    return;
+                }
+                
+                fileLabelText.textContent = file.name;
+                uploadBtn.disabled = false;
+                uploadedFile = file;
+                showFileInfo('✅ File selected: ' + file.name, 'success');
+            } else {
+                fileLabelText.textContent = 'Choose a PDF file';
+                uploadBtn.disabled = true;
+                uploadedFile = null;
+                showFileInfo('', '');
+            }
+        });
+
+        // ==================== UPLOAD FUNCTION ====================
+        async function uploadFile() {
+            if (!uploadedFile) {
+                showFileInfo('❌ Please select a file first', 'error');
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('file', uploadedFile);
+
+            // Show progress
+            uploadProgress.style.display = 'block';
+            progressBar.style.width = '0%';
+            uploadBtn.disabled = true;
+            fileInput.disabled = true;
+
+            // Simulate progress (since we don't have real progress events)
+            let progress = 0;
+            const progressInterval = setInterval(() => {
+                progress += 10;
+                if (progress <= 90) {
+                    progressBar.style.width = progress + '%';
+                }
+            }, 300);
+
+            try {
+                const response = await fetch('http://127.0.0.1:8000/upload', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                clearInterval(progressInterval);
+
+                if (!response.ok) {
+        const text = await response.text(); // ✅ Read as text first
+        let errorMsg = 'Upload failed';
+        try {
+            const errJson = JSON.parse(text);
+            errorMsg = errJson.detail || errJson.message || errorMsg;
+        } catch {
+            errorMsg = text || `Server error: ${response.status}`;
+        }
+        throw new Error(errorMsg);
+    }
+
+                const data = await response.json();
+                
+                // Show 100% progress
+                progressBar.style.width = '100%';
+                
+                // Display success info
+                const fileInfoHTML = `
+                    ✅ <strong>Upload Successful!</strong><br>
+                    📄 <strong>File:</strong> ${uploadedFile.name}<br>
+                    📊 <strong>Pages:</strong> ${data.pages}<br>
+                    🔢 <strong>Chunks:</strong> ${data.chunks}<br>
+                    ⚖️ <strong>Legal Confidence:</strong> ${data.classification.confidence}%<br>
+                    🔑 <strong>Keywords Found:</strong> ${data.classification.keywords_found.join(', ')}
+                `;
+                showFileInfo(fileInfoHTML, 'success');
+                
+                // Enable chat section
+                chatSection.style.display = 'block';
+                docName.textContent = `📄 ${uploadedFile.name}`;
+                uploadedFileName = uploadedFile.name;
+                questionInput.disabled = false;
+                sendBtn.disabled = false;
+                questionInput.focus();
+                
+                // Clear file input
+                fileInput.value = '';
+                fileLabelText.textContent = 'Choose a PDF file';
+                
+                // Add system message
+                addMessage('bot', `✅ <strong>Document processed successfully!</strong><br><br>I've analyzed <em>"${uploadedFile.name}"</em> and it's ready for questions. The document contains ${data.pages} pages split into ${data.chunks} searchable chunks. What would you like to know about it?`);
+                
+                // Hide progress after delay
+                setTimeout(() => {
+                    uploadProgress.style.display = 'none';
+                }, 1000);
+
+            } catch (error) {
+                clearInterval(progressInterval);
+                showFileInfo('❌ Error: ' + error.message, 'error');
+                progressBar.style.width = '0%';
+                setTimeout(() => {
+                    uploadProgress.style.display = 'none';
+                }, 2000);
+            } finally {
+                uploadBtn.disabled = false;
+                fileInput.disabled = false;
+            }
+        }
+
+        // ==================== CHAT FUNCTIONS ====================
+        function handleKeyPress(e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendQuestion();
+            }
+        }
+
+        async function sendQuestion() {
+            const question = questionInput.value.trim();
+            
+            if (!question) return;
+            
+            // Disable input and button
+            questionInput.disabled = true;
+            sendBtn.disabled = true;
+            
+            // Add user message
+            addMessage('user', question);
+            questionInput.value = '';
+            
+            // Show typing indicator
+            typingIndicator.style.display = 'flex';
+            
+            const formData = new FormData();
+            formData.append('query', question);
+            
+            try {
+                const response = await fetch('http://127.0.0.1:8000/chat', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                if (!response.ok) {
+    const text = await response.text();
+    let errorMsg = 'Chat failed';
+    try {
+        const errJson = JSON.parse(text);
+        errorMsg = errJson.detail || errJson.message || errorMsg;
+    } catch {
+        errorMsg = text || `Server error: ${response.status}`;
+    }
+    throw new Error(errorMsg);
+}
+                
+                const data = await response.json();
+                
+                // Hide typing indicator
+                typingIndicator.style.display = 'none';
+                
+                // Format answer
+                let answer = data.answer;
+                if (data.sources && data.sources.length > 0) {
+                    answer += `<br><br>📚 <strong>Sources:</strong> Page ${data.sources.join(', ')}`;
+                }
+                
+                addMessage('bot', answer);
+                
+            } catch (error) {
+                typingIndicator.style.display = 'none';
+                addMessage('bot', '❌ <strong>Error:</strong> ' + error.message);
+            } finally {
+                // Re-enable input and button
+                questionInput.disabled = false;
+                sendBtn.disabled = false;
+                questionInput.focus();
+            }
+        }
+
+        function addMessage(sender, text) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${sender}-message`;
+            messageDiv.innerHTML = text;
+            chatMessages.appendChild(messageDiv);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        function addWelcomeMessage() {
+            const welcomeHTML = `
+                <div class="message bot-message">
+                    <strong>👋 Welcome to Legal RAG Assistant!</strong><br><br>
+                    I'm your AI legal document assistant. Here's how to use me:<br><br>
+                    1️⃣ <strong>Upload</strong> a legal PDF document using the button above<br>
+                    2️⃣ <strong>Ask</strong> questions about the document content<br>
+                    3️⃣ <strong>Get</strong> answers with page citations<br><br>
+                    <em>Note: I only answer questions based on the uploaded document. All responses include source citations.</em>
+                </div>
+            `;
+            chatMessages.innerHTML = welcomeHTML;
+        }
+
+        // ==================== HELPER FUNCTIONS ====================
+        function showFileInfo(message, type) {
+            fileInfo.innerHTML = message;
+            fileInfo.className = 'file-info ' + type;
+        }
+
+        async function checkServerHealth() {
+            try {
+                const response = await fetch('http://127.0.0.1:8000/health');
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.index_loaded) {
+                        // There's a pre-existing index
+                        chatSection.style.display = 'block';
+                        docName.textContent = '📄 Previous document loaded';
+                        questionInput.disabled = false;
+                        sendBtn.disabled = false;
+                        addMessage('bot', '📂 <strong>Previous document found!</strong><br><br>I found an existing document index. You can start asking questions about the previously uploaded document, or upload a new one above.');
+                    }
+                }
+            } catch (error) {
+                console.log('Server health check failed:', error);
+            }
+        }
+
+        // Make functions available globally
+        window.uploadFile = uploadFile;
+        window.sendQuestion = sendQuestion;
+        window.handleKeyPress = handleKeyPress;
+    </script>
+</body>
+</html>
